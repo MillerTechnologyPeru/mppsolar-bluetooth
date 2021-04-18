@@ -15,6 +15,7 @@ public enum SolarService: GATTProfileService {
     public static let isPrimary: Bool = true
     
     public static let characteristics: [GATTProfileCharacteristic.Type] = [
-        SolarInformationCharacteristic.self
+        SolarInformationCharacteristic.self,
+        SolarCommandCharacteristic.self
     ]
 }

@@ -10,7 +10,7 @@ import Bluetooth
 import GATT
 import MPPSolar
 
-/// MPPSolar Information Characteristic
+/// MPPSolar Information GATT Characteristic.
 public struct SolarInformationCharacteristic: TLVCharacteristic, Equatable, Hashable, Codable {
     
     public static let uuid = BluetoothUUID(rawValue: "CC3CDD9F-A4B0-4F7D-88B0-6D3A93AE0001")!
@@ -30,7 +30,7 @@ public struct SolarInformationCharacteristic: TLVCharacteristic, Equatable, Hash
     /// Device serial number
     public let serialNumber: SerialNumber
     
-    /// Device serial number
+    /// Device protocol ID.
     public let protocolID: ProtocolID
     
     // MARK: - Initialization
