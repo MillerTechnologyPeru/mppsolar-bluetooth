@@ -61,7 +61,7 @@ public extension AuthenticationData {
     
     init(key: KeyData, message: AuthenticationMessage) {
         let hmac = Crypto.authenticationCode(for: message, using: key)
-        self.data = Data(hmac)
+        self.init(Data(hmac))
     }
     
     func isAuthenticated(with key: KeyData, message: AuthenticationMessage) -> Bool {

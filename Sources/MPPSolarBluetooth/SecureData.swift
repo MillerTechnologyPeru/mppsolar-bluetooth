@@ -128,6 +128,11 @@ public struct AuthenticationData: SecureData, Equatable, Hashable, Codable {
         self.data = data
     }
     
+    internal init(_ data: Data) {
+        assert(data.count == AuthenticationData.length)
+        self.data = data
+    }
+    
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try data.withUnsafeBytes(body)
     }
