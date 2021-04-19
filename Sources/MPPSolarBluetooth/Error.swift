@@ -24,8 +24,9 @@ public enum MPPSolarBluetoothError: Error {
     case incompatiblePeripheral(Error?)
     
     /// Encryption error.
-    case encryptionError(Error?)
+    case encryptionError(Error)
     
+    /// HMAC error
     case invalidAuthentication
 }
 /*
