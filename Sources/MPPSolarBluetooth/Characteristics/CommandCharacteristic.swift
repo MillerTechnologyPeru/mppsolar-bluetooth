@@ -13,7 +13,7 @@ import MPPSolar
 /// MPPSolar Command  GATT Characteristic.
 public struct SolarCommandCharacteristic: TLVCharacteristic, Codable, Equatable {
     
-    public static let uuid = BluetoothUUID(rawValue: "CC3CDD9F-A4B0-4F7D-88B0-6D3A93AE0002")!
+    public static let uuid = BluetoothUUID.solarCommandCharacteristic
     
     public static let service: GATTProfileService.Type = SolarService.self
     

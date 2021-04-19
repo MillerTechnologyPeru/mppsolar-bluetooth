@@ -13,7 +13,7 @@ import MPPSolar
 /// MPPSolar Information GATT Characteristic.
 public struct SolarInformationCharacteristic: TLVCharacteristic, Equatable, Hashable, Codable {
     
-    public static let uuid = BluetoothUUID(rawValue: "CC3CDD9F-A4B0-4F7D-88B0-6D3A93AE0001")!
+    public static let uuid = BluetoothUUID.solarInformationCharacteristic
     
     public static let properties: Bluetooth.BitMaskOptionSet<GATT.Characteristic.Property> = [.read]
     
