@@ -43,3 +43,64 @@ public struct SolarCommandCharacteristic: TLVCharacteristic, Codable, Equatable 
         return value
     }
 }
+
+// MARK: - Extensions
+
+public extension CentralProtocol {
+    
+    /// Sends the specified command to the solar device.
+    ///
+    /// - Parameter peripheral: The Bluetooth LE peripheral.
+    ///
+    /// - Returns: The command response or acknowledgement.
+    func solarCommand<T>(_ command: T,
+                      using sharedSecret: KeyData,
+                      for peripheral: Peripheral,
+                      timeout: TimeInterval = .gattDefaultTimeout) throws -> T.Response where T: Command {
+        
+        return try connection(for: peripheral, timeout: timeout) {
+            try $0.solarCommand(command, using: sharedSecret)
+        }
+    }
+    
+    /// Sends the specified command to the solar device.
+    ///
+    /// - Parameter peripheral: The Bluetooth LE peripheral.
+    ///
+    /// - Returns: The command response or acknowledgement.
+    func solarCommand(_ command: String,
+                      using sharedSecret: KeyData,
+                      for peripheral: Peripheral,
+                      timeout: TimeInterval = .gattDefaultTimeout) throws -> String {
+        
+        return try connection(for: peripheral, timeout: timeout) {
+            try $0.solarCommand(command, using: sharedSecret)
+        }
+    }
+}
+
+public extension GATTConnection {
+    
+    /// Sends the specified command to the solar device.
+    ///
+    /// - Parameter peripheral: The Bluetooth LE peripheral.
+    ///
+    /// - Returns: The command response or acknowledgement.
+    func solarCommand<T>(_ command: T, using sharedSecret: KeyData) throws -> T.Response where T: Command {
+        let responseString = try solarCommand(command.rawValue, using: sharedSecret)
+        guard let response = T.Response(rawValue: responseString) else {
+            throw MPPSolarError.invalidResponse(Data(responseString.utf8))
+        }
+        return response
+    }
+    
+    /// Sends the specified command to the solar device.
+    ///
+    /// - Parameter peripheral: The Bluetooth LE peripheral.
+    ///
+    /// - Returns: The command response or acknowledgement.
+    func solarCommand(_ command: String, using sharedSecret: KeyData) throws -> String {
+        try write(SolarCommandCharacteristic(command: command, sharedSecret: sharedSecret))
+        fatalError()
+    }
+}

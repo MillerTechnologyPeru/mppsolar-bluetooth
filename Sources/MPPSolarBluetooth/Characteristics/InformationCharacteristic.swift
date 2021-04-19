@@ -51,11 +51,11 @@ public struct SolarInformationCharacteristic: TLVCharacteristic, Equatable, Hash
 
 public extension CentralProtocol {
     
-    /// Fetches the provisioning state for the specified device.
+    /// Fetches the information for the specified solar device.
     ///
     /// - Parameter peripheral: The Bluetooth LE peripheral.
     ///
-    /// - Returns: The provisioning state of the specified device.
+    /// - Returns: The information for the specified solar device.
     func solarInformation(for peripheral: Peripheral,
                           timeout: TimeInterval = .gattDefaultTimeout) throws -> SolarInformationCharacteristic {
         
@@ -67,11 +67,11 @@ public extension CentralProtocol {
 
 public extension GATTConnection {
     
-    /// Fetches the provisioning state for the specified device.
+    /// Fetches the information for the specified solar device
     ///
     /// - Parameter peripheral: The Bluetooth LE peripheral.
     ///
-    /// - Returns: The provisioning state of the specified device.
+    /// - Returns: The information for the specified solar device.
     func solarInformation() throws -> SolarInformationCharacteristic {
         try read(SolarInformationCharacteristic.self)
     }
