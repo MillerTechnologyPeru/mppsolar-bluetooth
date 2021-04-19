@@ -4,7 +4,10 @@ import PackageDescription
 var package = Package(
     name: "mppsolar-bluetooth",
     platforms: [
-        .macOS(.v10_12)
+        .macOS(.v10_15),
+        .iOS(.v13),
+        .watchOS(.v6),
+        .tvOS(.v13)
     ],
     products: [
         /*
