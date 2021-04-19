@@ -46,3 +46,33 @@ public struct SolarInformationCharacteristic: TLVCharacteristic, Equatable, Hash
         self.protocolID = protocolID
     }
 }
+
+// MARK: - Extensions
+
+public extension CentralProtocol {
+    
+    /// Fetches the provisioning state for the specified device.
+    ///
+    /// - Parameter peripheral: The Bluetooth LE peripheral.
+    ///
+    /// - Returns: The provisioning state of the specified device.
+    func solarInformation(for peripheral: Peripheral,
+                          timeout: TimeInterval = .gattDefaultTimeout) throws -> SolarInformationCharacteristic {
+        
+        return try connection(for: peripheral, timeout: timeout) {
+            try $0.solarInformation()
+        }
+    }
+}
+
+public extension GATTConnection {
+    
+    /// Fetches the provisioning state for the specified device.
+    ///
+    /// - Parameter peripheral: The Bluetooth LE peripheral.
+    ///
+    /// - Returns: The provisioning state of the specified device.
+    func solarInformation() throws -> SolarInformationCharacteristic {
+        try read(SolarInformationCharacteristic.self)
+    }
+}
