@@ -18,8 +18,7 @@ public struct EncryptedData: Equatable, Hashable, Codable {
 
 public extension EncryptedData {
     
-    init(encrypt data: Data, with key: KeyData) throws {
-        
+    init<Plaintext>(encrypt data: Plaintext, with key: KeyData) throws where Plaintext : DataProtocol {
         do {
             let encryptedData = try Crypto.encrypt(data, using: key)
             self.authentication = Authentication(key: key)

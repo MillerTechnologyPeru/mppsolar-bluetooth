@@ -79,6 +79,30 @@ public extension GATTConnection {
         let characteristics = self.characteristics[T.service.uuid] ?? []
         try central.write(value, for: characteristics, response: response, timeout: timeout)
     }
+    func firstNotification<T: GATTProfileCharacteristic>(_ notificationType: T.Type, after block: (() throws -> ())? = nil) throws -> T {
+        try block?()
+        guard let service = characteristics[T.service.uuid] else {
+            throw MPPSolarBluetoothError.serviceNotFound(T.service.uuid)
+        }
+        guard let characteristic = service.first(where: { $0.uuid == T.uuid }) else {
+            throw MPPSolarBluetoothError.characteristicNotFound(T.uuid)
+        }
+        var result: Result<T, MPPSolarBluetoothError>?
+        try central.notify({
+            if let value = T(data: $0) {
+                result = .success(value)
+            } else {
+                result = .failure(.invalidCharacteristicValue(T.uuid))
+            }
+        }, for: characteristic, timeout: timeout.timeRemaining())
+        while result == nil, Date() < timeout.end {
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        guard let value = try result?.get() else {
+            throw CentralError.timeout
+        }
+        return value
+    }
 }
 
 internal extension CentralProtocol {

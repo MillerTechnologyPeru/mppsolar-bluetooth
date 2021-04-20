@@ -21,4 +21,8 @@ public extension BluetoothUUID {
     static var solarCommandCharacteristic: BluetoothUUID {
         return BluetoothUUID(rawValue: "CC3CDD9F-A4B0-4F7D-88B0-6D3A93AE0002")!
     }
+    
+    static var solarCommandResponseCharacteristic: BluetoothUUID {
+        return BluetoothUUID(rawValue: "CC3CDD9F-A4B0-4F7D-88B0-6D3A93AE0003")!
+    }
 }

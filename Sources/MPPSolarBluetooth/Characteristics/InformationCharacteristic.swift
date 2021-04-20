@@ -73,6 +73,6 @@ public extension GATTConnection {
     ///
     /// - Returns: The information for the specified solar device.
     func solarInformation() throws -> SolarInformationCharacteristic {
-        try read(SolarInformationCharacteristic.self)
+        return try read(SolarInformationCharacteristic.self)
     }
 }

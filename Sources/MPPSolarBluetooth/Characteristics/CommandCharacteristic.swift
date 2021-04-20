@@ -100,7 +100,12 @@ public extension GATTConnection {
     ///
     /// - Returns: The command response or acknowledgement.
     func solarCommand(_ command: String, using sharedSecret: KeyData) throws -> String {
-        try write(SolarCommandCharacteristic(command: command, sharedSecret: sharedSecret))
+        try self.write(
+            SolarCommandCharacteristic(
+                command: command,
+                sharedSecret: sharedSecret
+            )
+        )
         fatalError()
-    }
+     }  
 }

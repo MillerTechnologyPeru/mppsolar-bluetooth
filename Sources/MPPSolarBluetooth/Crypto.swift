@@ -28,7 +28,7 @@ internal struct Crypto {
         return data
     }
     
-    static func encrypt(_ data: Data, using key: KeyData) throws -> Data {
+    static func encrypt<Plaintext>(_ data: Plaintext, using key: KeyData) throws -> Data where Plaintext : DataProtocol {
         do {
             let sealedBox = try ChaChaPoly.seal(
                 data,
