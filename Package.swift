@@ -1,76 +1,87 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.7
 import PackageDescription
 
-var package = Package(
+let package = Package(
     name: "mppsolar-bluetooth",
     platforms: [
-        .macOS(.v10_15),
-        .iOS(.v13),
-        .watchOS(.v6),
-        .tvOS(.v13)
+        .macOS(.v12)
     ],
     products: [
-        /*
         .executable(
             name: "mppsolar-bluetooth",
-            targets: ["MPPSolarBluetoothServer"]
-        ),*/
-        .library(
-            name: "MPPSolarBluetooth",
             targets: ["MPPSolarBluetooth"]
         )
     ],
     dependencies: [
         .package(
             url: "https://github.com/MillerTechnologyPeru/MPPSolar.git",
-            .branch("master")
+            branch: "master"
         ),
         .package(
-            url: "https://github.com/apple/swift-argument-parser",
-            .upToNextMinor(from: "0.1.0")
+            url: "https://github.com/MillerTechnologyPeru/BluetoothAccessory.git",
+            branch: "master"
         ),
         .package(
             url: "https://github.com/PureSwift/Bluetooth.git",
-            .branch("master")
-        ),
-        .package(
-            url: "https://github.com/PureSwift/GATT.git",
-            .branch("master")
-        ),
-        .package(
-            url: "https://github.com/PureSwift/BluetoothLinux.git",
-            .branch("master")
-        ),
-        .package(
-            url: "https://github.com/PureSwift/BluetoothDarwin.git",
-            .branch("master")
-        ),
-        .package(
-            url: "https://github.com/apple/swift-crypto.git",
-            .upToNextMinor(from: "1.1.6")
+            .upToNextMajor(from: "6.0.0")
         ),
         .package(
             url: "https://github.com/PureSwift/TLVCoding.git",
-            .branch("master")
+            branch: "master"
+        ),
+        .package(
+            url: "https://github.com/PureSwift/GATT.git",
+            branch: "master"
+        ),
+        .package(
+            url: "https://github.com/PureSwift/BluetoothLinux.git",
+            branch: "master"
+        ),
+        .package(
+            url: "https://github.com/apple/swift-argument-parser",
+            from: "1.2.0"
         ),
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "MPPSolarBluetooth",
             dependencies: [
                 "MPPSolar",
-                "Bluetooth",
-                "GATT",
-                "TLVCoding"
+                "BluetoothAccessory",
+                .product(
+                    name: "Bluetooth",
+                    package: "Bluetooth"
+                ),
+                .product(
+                    name: "BluetoothGATT",
+                    package: "Bluetooth",
+                    condition: .when(platforms: [.macOS, .linux])
+                ),
+                .product(
+                    name: "BluetoothHCI",
+                    package: "Bluetooth",
+                    condition: .when(platforms: [.macOS, .linux])
+                ),
+                .product(
+                    name: "BluetoothGAP",
+                    package: "Bluetooth",
+                    condition: .when(platforms: [.macOS, .linux])
+                ),
+                .product(
+                    name: "DarwinGATT",
+                    package: "GATT",
+                    condition: .when(platforms: [.macOS])
+                ),
+                .product(
+                    name: "BluetoothLinux",
+                    package: "BluetoothLinux",
+                    condition: .when(platforms: [.linux])
+                ),
+                .product(
+                    name: "ArgumentParser",
+                    package: "swift-argument-parser"
+                )
             ]
-        ),
-        .testTarget(
-            name: "MPPSolarBluetoothTests",
-            dependencies: ["MPPSolarBluetooth"]
-        ),
+        )
     ]
 )
-
-#if os(Linux)
-package.targets[0].dependencies.append("Crypto")
-#endif

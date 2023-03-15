@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug mppsolar-bluetooth",
+            "program": "${workspaceFolder:mppsolar-bluetooth}/.build/debug/mppsolar-bluetooth",
+            "args": [],
+            "cwd": "${workspaceFolder:mppsolar-bluetooth}",
+            "preLaunchTask": "swift: Build Debug mppsolar-bluetooth"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release mppsolar-bluetooth",
+            "program": "${workspaceFolder:mppsolar-bluetooth}/.build/release/mppsolar-bluetooth",
+            "args": [],
+            "cwd": "${workspaceFolder:mppsolar-bluetooth}",
+            "preLaunchTask": "swift: Build Release mppsolar-bluetooth"
+        }
+    ]
+}
