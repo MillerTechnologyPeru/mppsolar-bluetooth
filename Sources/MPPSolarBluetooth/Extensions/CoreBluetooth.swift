@@ -11,6 +11,7 @@ import CoreBluetooth
 import Bluetooth
 import GATT
 import DarwinGATT
+import BluetoothAccessory
 
 internal protocol CoreBluetoothManager {
     
@@ -40,4 +41,26 @@ extension CoreBluetoothManager {
         }
     }
 }
+
+extension DarwinPeripheral: AccessoryPeripheralManager {
+    
+    public func advertise(
+        beacon: AccessoryBeacon,
+        rssi: Int8,
+        name: String,
+        service: ServiceType
+    ) async throws {
+        try await waitPowerOn()
+        let advertisingOptions = DarwinPeripheral.AdvertisingOptions(
+            localName: name,
+            serviceUUIDs: [BluetoothUUID(service: service)],
+            beacon: AppleBeacon(bluetoothAccessory: beacon, rssi: rssi)
+        )
+        if await isAdvertising {
+            await stop()
+        }
+        try await start(options: advertisingOptions)
+    }
+}
+
 #endif

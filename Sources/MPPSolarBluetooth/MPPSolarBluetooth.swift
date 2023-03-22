@@ -47,9 +47,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
     @Option(help: "The received signal strength indicator (RSSI) value (measured in decibels) for the device.")
     var rssi: Int8 = 30
     
-    #if os(Linux)
-    private var hostController: HostController!
-    #endif
+    private static var server: BluetoothAccesoryServer<NativePeripheral>!
     
     func validate() throws {
         guard refreshInterval >= 1 else {
@@ -81,12 +79,8 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         let advertisedService = ServiceType.solarPanel
         
         #if os(Linux)
-        hostController = await HostController.default
-        // keep trying to load Bluetooth device
-        while hostController == nil {
-            print("No Bluetooth adapters found")
-            try await Task.sleep(nanoseconds: 5 * 1_000_000_000)
-            hostController = await HostController.default
+        guard let hostController = await HostController.default else {
+            throw CommandError.bluetoothUnavailable
         }
         let address = try await hostController.readDeviceAddress()
         print("Bluetooth Controller: \(address)")
@@ -108,47 +102,17 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         
         peripheral.log = { print("Peripheral:", $0) }
         
-        #if os(macOS)
-        // wait until XPC connection to bluetoothd is established and hardware is on
-        try await peripheral.waitPowerOn()
-        let advertisingOptions = DarwinPeripheral.AdvertisingOptions(
-            localName: name,
-            serviceUUIDs: [BluetoothUUID(service: advertisedService)],
-            beacon: AppleBeacon(bluetoothAccessory: .id(id), rssi: rssi)
-        )
-        #elseif os(Linux)
-        // write classic BT name
-        try await hostController.writeLocalName(name)
-        // advertise iBeacon and interval
-        try await hostController.setAdvertisingData(
-            beacon: .id(id),
-            rssi: rssi
-        )
-        let advertisingOptions = LinuxPeripheral.AdvertisingOptions(
-            advertisingData: LowEnergyAdvertisingData(beacon: .id(id), rssi: rssi),
-            scanResponse: LowEnergyAdvertisingData(service: advertisedService, name: name)
-        )
-        #endif
-        
         // publish GATT server, enable advertising
-        try await peripheral.start(options: advertisingOptions)
-        
-        #if os(Linux)
-        // make sure the device is always discoverable
-        Task.detached {
-            while controller != nil {
-                try await Task.sleep(nanoseconds: 30 * 1_000_000_000)
-                do { try await hostController?.enableLowEnergyAdvertising() }
-                catch HCIError.commandDisallowed { } // already enabled
-                catch {
-                    print("Unable to enable advertising")
-                    dump(error)
-                }
-            }
-        }
-        #endif
+        try await Self.server = BluetoothAccesoryServer(
+            peripheral: peripheral,
+            id: id,
+            rssi: rssi,
+            name: name,
+            advertised: advertisedService,
+            services: [:]
+        )
     }
-    
+    /*
     // change advertisment for notifications
     private func characteristicChanged(_ characteristic: CharacteristicType) {
         #if os(Linux)
@@ -175,6 +139,6 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             }
         }
         #endif
-    }
+    }*/
 }
 
