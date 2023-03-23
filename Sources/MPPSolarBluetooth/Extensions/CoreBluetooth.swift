@@ -50,7 +50,8 @@ extension DarwinPeripheral: AccessoryPeripheralManager {
         name: String,
         service: ServiceType
     ) async throws {
-        try await waitPowerOn()
+        let isPoweredOn = await self.state == .poweredOn
+        assert(isPoweredOn)
         let advertisingOptions = DarwinPeripheral.AdvertisingOptions(
             localName: name,
             serviceUUIDs: [BluetoothUUID(service: service)],

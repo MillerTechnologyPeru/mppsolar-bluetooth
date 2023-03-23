@@ -102,6 +102,43 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         
         peripheral.log = { print("Peripheral:", $0) }
         
+        // read basic info
+        
+        #if os(macOS)
+        try await peripheral.waitPowerOn()
+        #endif
+        
+        let information = try await InformationService(
+            peripheral: peripheral,
+            id: id,
+            name: name,
+            accessoryType: .solarPanel
+        )
+        
+        #if os(Linux)
+        let gattInformation = GATTAttribute.Service(
+            uuid: .deviceInformation,
+            characteristics: [
+                GATTAttribute.Characteristic(
+                    uuid: .manufacturerNameString,
+                    value: GATTManufacturerNameString(rawValue: "MPPSolar").data,
+                    permissions: [.read],
+                    properties: [.read],
+                    descriptors: []
+                ),
+                GATTAttribute.Characteristic(
+                    uuid: .deviceInformation,
+                    value: GATTModelNumber(rawValue: "MPPSolar").data,
+                    permissions: [.read],
+                    properties: [.read],
+                    descriptors: []
+                ),
+            ]
+        )
+        
+        _ = try await peripheral.add(service: gattInformation)
+        #endif
+        
         // publish GATT server, enable advertising
         try await Self.server = BluetoothAccesoryServer(
             peripheral: peripheral,
@@ -109,9 +146,11 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             rssi: rssi,
             name: name,
             advertised: advertisedService,
-            services: [:]
+            services: [information]
         )
+        
     }
+    
     /*
     // change advertisment for notifications
     private func characteristicChanged(_ characteristic: CharacteristicType) {
