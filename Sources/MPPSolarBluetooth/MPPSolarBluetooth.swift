@@ -101,12 +101,23 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         print(peripheral.options)
         
         peripheral.log = { print("Peripheral:", $0) }
-        
-        // read basic info
-        
+                
         #if os(macOS)
+        // wait till power on
         try await peripheral.waitPowerOn()
         #endif
+        
+        // read basic info
+        #if os(macOS) && DEBUG
+        let device = MPPSolar.mock
+        #else
+        guard let device = MPPSolar(path: path) else {
+            throw CommandError.solarDeviceUnavailable
+        }
+        #endif
+        
+        let serialNumber = try device.send(SerialNumber.Query()).serialNumber.rawValue
+        //let status = try device.send(GeneralStatus.Query())
         
         let information = try await InformationService(
             peripheral: peripheral,
@@ -120,15 +131,29 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             uuid: .deviceInformation,
             characteristics: [
                 GATTAttribute.Characteristic(
-                    uuid: .manufacturerNameString,
+                    uuid: GATTManufacturerNameString.uuid,
                     value: GATTManufacturerNameString(rawValue: "MPPSolar").data,
                     permissions: [.read],
                     properties: [.read],
                     descriptors: []
                 ),
                 GATTAttribute.Characteristic(
-                    uuid: .deviceInformation,
-                    value: GATTModelNumber(rawValue: "MPPSolar").data,
+                    uuid: GATTModelNumber.uuid,
+                    value: GATTModelNumber(rawValue: model).data,
+                    permissions: [.read],
+                    properties: [.read],
+                    descriptors: []
+                ),
+                GATTAttribute.Characteristic(
+                    uuid: GATTSoftwareRevisionString.uuid,
+                    value: GATTSoftwareRevisionString(rawValue: MPPSolarBluetoothTool.configuration.version).data,
+                    permissions: [.read],
+                    properties: [.read],
+                    descriptors: []
+                ),
+                GATTAttribute.Characteristic(
+                    uuid: GATTSerialNumberString.uuid,
+                    value: GATTSerialNumberString(rawValue: serialNumber).data,
                     permissions: [.read],
                     properties: [.read],
                     descriptors: []
@@ -148,7 +173,6 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             advertised: advertisedService,
             services: [information]
         )
-        
     }
     
     /*
