@@ -74,4 +74,16 @@ public extension MPPSolarBatteryService {
         ]
     }
 }
+
+internal extension GeneralStatus {
+
+    var chargingState: BluetoothAccessory.ChargingState {
+        return batteryChargingCurrent > 0 ? .charging : .notCharging
+    }
+    
+    var statusLowBattery: BluetoothAccessory.StatusLowBattery {
+        return (batteryCapacity < 25) ? .low : .normal
+    }
+}
+
 #endif

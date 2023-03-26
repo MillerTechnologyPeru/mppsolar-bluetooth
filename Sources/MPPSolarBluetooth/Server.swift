@@ -57,24 +57,6 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     
     var lastIdentify: (UUID, Date)?
     
-    nonisolated var information: MPPSolarInformationService {
-        get async {
-            await server[MPPSolarInformationService.self]
-        }
-    }
-    
-    nonisolated var authentication: AuthenticationService {
-        get async {
-            await server[AuthenticationService.self]
-        }
-    }
-    
-    nonisolated var outlet: OutletService {
-        get async {
-            await server[OutletService.self]
-        }
-    }
-    
     public init(
         peripheral: Peripheral,
         device: MPPSolar,
@@ -111,13 +93,9 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
             protocolID: protocolID
         )
         
-        let authentication = try await AuthenticationService(
-            peripheral: peripheral
-        )
-        
-        let outlet = try await OutletService(
-            peripheral: peripheral
-        )
+        let authentication = try await AuthenticationService(peripheral: peripheral)
+        let battery = try await MPPSolarBatteryService(peripheral: peripheral)
+        let outlet = try await OutletService(peripheral: peripheral)
         
         self.id = id
         self.rssi = rssi
@@ -142,7 +120,8 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
             services: [
                 information,
                 authentication,
-                outlet
+                battery,
+                outlet,
             ]
         )
         
@@ -210,6 +189,15 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     public func refresh() async throws {
         
         let status = try device.send(GeneralStatus.Query())
+        
+        // update battery service
+        await server.update(MPPSolarBatteryService.self) {
+            $0.batteryLevel = UInt8(status.batteryCapacity)
+            $0.batteryVoltage = status.batteryVoltage
+            $0.batteryChargingCurrent = UInt8(status.batteryChargingCurrent)
+            $0.statusLowBattery = status.statusLowBattery
+            $0.chargingState = status.chargingState
+        }
         
         await server.update(OutletService.self) {
             $0.powerState = status.outputVoltage > 0
@@ -322,6 +310,33 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     public func updateCryptoHash() async {
         await self.server.update(AuthenticationService.self) {
             $0.cryptoHash = Nonce()
+        }
+    }
+}
+
+internal extension MPPSolarBluetoothServer {
+    
+    nonisolated var authentication: AuthenticationService {
+        get async {
+            await server[AuthenticationService.self]
+        }
+    }
+    
+    nonisolated var information: MPPSolarInformationService {
+        get async {
+            await server[MPPSolarInformationService.self]
+        }
+    }
+    
+    nonisolated var outlet: OutletService {
+        get async {
+            await server[OutletService.self]
+        }
+    }
+        
+    nonisolated var battery: MPPSolarBatteryService {
+        get async {
+            await server[MPPSolarBatteryService.self]
         }
     }
 }
