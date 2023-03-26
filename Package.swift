@@ -26,10 +26,6 @@ let package = Package(
             .upToNextMajor(from: "6.0.0")
         ),
         .package(
-            url: "https://github.com/PureSwift/TLVCoding.git",
-            branch: "master"
-        ),
-        .package(
             url: "https://github.com/PureSwift/GATT.git",
             branch: "master"
         ),
