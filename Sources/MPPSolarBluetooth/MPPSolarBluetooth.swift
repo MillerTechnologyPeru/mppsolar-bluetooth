@@ -116,9 +116,15 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         }
         #endif
         
-        
         // publish GATT server, enable advertising
-        
+        Self.server = try await MPPSolarBluetoothServer(
+            peripheral: peripheral,
+            device: device,
+            id: id,
+            rssi: rssi,
+            model: model,
+            setupSharedSecret: KeyData() // FIXME: Persist secret data
+        )
     }
 }
 

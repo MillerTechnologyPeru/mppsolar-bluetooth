@@ -40,12 +40,12 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     let serialNumber: SerialNumber // loaded from solar device
     
     let protocolID: ProtocolID
-    
-    
-    
+        
     public let setupSharedSecret: BluetoothAccessory.KeyData
     
     private var server: BluetoothAccessoryServer<Peripheral>!
+    
+    public let device: MPPSolar
     
     private var keySecrets = [UUID: KeyData]()
     private var keys = [UUID: Key]()
@@ -59,9 +59,9 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     
     var lastIdentify: (UUID, Date)?
     
-    nonisolated var information: InformationService {
+    nonisolated var information: MPPSolarInformationService {
         get async {
-            await server[InformationService.self]
+            await server[MPPSolarInformationService.self]
         }
     }
     
@@ -96,7 +96,7 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         let serialNumber = try device.send(SerialNumber.Query()).serialNumber
         let protocolID = try device.send(ProtocolID.Query()).protocolID
         
-        let information = try await InformationService(
+        let information = try await MPPSolarInformationService(
             peripheral: peripheral,
             id: id,
             name: name,
@@ -105,7 +105,8 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
             model: model,
             serialNumber: serialNumber.rawValue,
             softwareVersion: softwareVersion,
-            metadata: []
+            metadata: [],
+            protocolID: protocolID
         )
         
         let authentication = try await AuthenticationService(
@@ -127,6 +128,7 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         self.serialNumber = serialNumber
         self.protocolID = protocolID
         self.setupSharedSecret = setupSharedSecret
+        self.device = device
         self.server = try await BluetoothAccessoryServer(
             peripheral: peripheral,
             delegate: self,
