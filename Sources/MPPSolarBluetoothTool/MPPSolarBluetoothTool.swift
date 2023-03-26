@@ -43,19 +43,18 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         version: "1.0.0"
     )
     
-    @Option(help: "The special file path to the solar device.")
-    var path: String = "/dev/hidraw0"
+    @Option(help: "The path to the solar device.")
+    var device: String = "/dev/hidraw0"
+    
+    @Option(help: "The path to the configuration.")
+    var configuration: String = "configuration.json"
     
     @Option(help: "The interval (in seconds) at which data is refreshed.")
     var refreshInterval: Int = 10
     
-    @Option(help: "The model of the solar inverter.")
-    var model: String = "PIP-2424LV-MSD"
-    
-    @Option(help: "The received signal strength indicator (RSSI) value (measured in decibels) for the device.")
-    var rssi: Int8 = 30
-    
     private static var server: MPPSolarBluetoothServer<NativePeripheral>!
+    
+    private static let fileManager = FileManager()
     
     func validate() throws {
         guard refreshInterval >= 1 else {
@@ -65,10 +64,17 @@ struct MPPSolarBluetoothTool: ParsableCommand {
     
     func run() throws {
         
+        // read configuration first
+        let configuration = try loadConfiguration()
+        
+        #if DEBUG
+        printConfiguration(configuration)
+        #endif
+        
         // start async code
         Task {
             do {
-                try await start()
+                try await start(with: configuration)
             }
             catch {
                 fatalError("\(error)")
@@ -79,10 +85,82 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         RunLoop.current.run()
     }
     
-    private func start() async throws {
+    private func start(with configuration: MPPSolarConfiguration) async throws {
         
-        let id = UUID()
-        let rssi = self.rssi
+        // load solar device
+        let device = try await loadSolarDevice()
+        // load Bluetooth
+        let peripheral = try await loadBluetooth()
+        
+        // publish GATT server, enable advertising
+        Self.server = try await MPPSolarBluetoothServer(
+            peripheral: peripheral,
+            device: device,
+            id: configuration.id,
+            rssi: configuration.rssi,
+            model: configuration.model,
+            softwareVersion: MPPSolarBluetoothTool.configuration.version,
+            setupSharedSecret: configuration.setupSecret
+        )
+    }
+    
+    static func url(for path: String) -> URL {
+        let url: URL
+        if path.contains("/") {
+            url = URL(fileURLWithPath: path)
+        } else {
+            let currentDirectory = FileManager.default.currentDirectoryPath
+            url = URL(fileURLWithPath: currentDirectory).appendingPathComponent(path)
+        }
+        return url
+    }
+    
+    func loadConfiguration() throws -> MPPSolarConfiguration {
+        
+        let fileURL = Self.url(for: self.configuration)
+        if Self.fileManager.fileExists(atPath: fileURL.path) {
+            let configuration = try MPPSolarConfiguration(url: fileURL)
+            #if DEBUG
+            print("Loaded configuration at \(fileURL.path)")
+            #endif
+            return configuration
+        } else {
+            let configuration = MPPSolarConfiguration()
+            let data = try configuration.encode()
+            let didCreate = Self.fileManager.createFile(atPath: fileURL.path, contents: data)
+            precondition(didCreate)
+            #if DEBUG
+            print("Created configuration at \(fileURL.path)")
+            #endif
+            return configuration
+        }
+    }
+    
+    func printConfiguration(_ configuration: MPPSolarConfiguration) {
+        print("ID: \(configuration.id)")
+        print("Model: \(configuration.model)")
+        print("RSSI: \(configuration.rssi)")
+        
+    }
+    
+    func loadSolarDevice() async throws -> MPPSolar {
+        
+        #if os(macOS) && DEBUG
+        let device = MPPSolar.mock
+        print("Using mocked solar device")
+        #else
+        guard let device = MPPSolar(path: self.device) else {
+            throw CommandError.solarDeviceUnavailable
+        }
+        print("Loaded solar device at \(self.device)")
+        #endif
+        
+        return device
+    }
+    
+    func loadBluetooth() async throws -> NativePeripheral {
+        
+        // TODO: Specify HCI device
         
         #if os(Linux)
         guard let hostController = await HostController.default else {
@@ -103,11 +181,6 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         let peripheral = DarwinPeripheral()
         #endif
         
-        #if DEBUG
-        print("Initialized \(String(reflecting: type(of: peripheral))) with options:")
-        print(peripheral.options)
-        #endif
-        
         peripheral.log = { print("Peripheral:", $0) }
         
         #if os(macOS)
@@ -115,25 +188,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         try await peripheral.waitPowerOn()
         #endif
         
-        // read basic info
-        #if os(macOS) && DEBUG
-        let device = MPPSolar.mock
-        #else
-        guard let device = MPPSolar(path: path) else {
-            throw CommandError.solarDeviceUnavailable
-        }
-        #endif
-        
-        // publish GATT server, enable advertising
-        Self.server = try await MPPSolarBluetoothServer(
-            peripheral: peripheral,
-            device: device,
-            id: id,
-            rssi: rssi,
-            model: model,
-            softwareVersion: MPPSolarBluetoothTool.configuration.version,
-            setupSharedSecret: KeyData() // FIXME: Persist secret data
-        )
+        return peripheral
     }
 }
 
