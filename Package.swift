@@ -9,6 +9,10 @@ let package = Package(
     products: [
         .executable(
             name: "mppsolar-bluetooth",
+            targets: ["MPPSolarBluetoothTool"]
+        ),
+        .library(
+            name: "MPPSolarBluetooth",
             targets: ["MPPSolarBluetooth"]
         )
     ],
@@ -40,6 +44,51 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
+            name: "MPPSolarBluetoothTool",
+            dependencies: [
+                "MPPSolar",
+                "MPPSolarBluetooth",
+                "BluetoothAccessory",
+                .product(
+                    name: "Bluetooth",
+                    package: "Bluetooth"
+                ),
+                .product(
+                    name: "BluetoothGATT",
+                    package: "Bluetooth",
+                    condition: .when(platforms: [.macOS, .linux])
+                ),
+                .product(
+                    name: "BluetoothHCI",
+                    package: "Bluetooth",
+                    condition: .when(platforms: [.macOS, .linux])
+                ),
+                .product(
+                    name: "BluetoothGAP",
+                    package: "Bluetooth",
+                    condition: .when(platforms: [.macOS, .linux])
+                ),
+                .product(
+                    name: "GATT",
+                    package: "GATT"
+                ),
+                .product(
+                    name: "DarwinGATT",
+                    package: "GATT",
+                    condition: .when(platforms: [.macOS])
+                ),
+                .product(
+                    name: "BluetoothLinux",
+                    package: "BluetoothLinux",
+                    condition: .when(platforms: [.linux])
+                ),
+                .product(
+                    name: "ArgumentParser",
+                    package: "swift-argument-parser"
+                )
+            ]
+        ),
+        .target(
             name: "MPPSolarBluetooth",
             dependencies: [
                 "MPPSolar",
@@ -64,19 +113,9 @@ let package = Package(
                     condition: .when(platforms: [.macOS, .linux])
                 ),
                 .product(
-                    name: "DarwinGATT",
-                    package: "GATT",
-                    condition: .when(platforms: [.macOS])
+                    name: "GATT",
+                    package: "GATT"
                 ),
-                .product(
-                    name: "BluetoothLinux",
-                    package: "BluetoothLinux",
-                    condition: .when(platforms: [.linux])
-                ),
-                .product(
-                    name: "ArgumentParser",
-                    package: "swift-argument-parser"
-                )
             ]
         )
     ]

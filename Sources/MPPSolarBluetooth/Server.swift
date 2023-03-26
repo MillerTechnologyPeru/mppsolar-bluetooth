@@ -5,15 +5,11 @@
 //  Created by Alsey Coleman Miller on 3/25/23.
 //
 
+#if canImport(BluetoothGATT)
 import Foundation
 import Bluetooth
 import BluetoothGATT
-import BluetoothHCI
-import BluetoothGAP
 import GATT
-#if canImport(DarwinGATT)
-import DarwinGATT
-#endif
 import BluetoothAccessory
 import MPPSolar
 
@@ -23,23 +19,23 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     
     public let id: UUID
     
-    let rssi: Int8
+    public let rssi: Int8
     
-    let model: String
+    public let model: String
     
-    let name: String
+    public let name: String
     
-    let manufacturer: String
+    public let manufacturer: String
     
-    let accessoryType: AccessoryType
+    public let accessoryType: AccessoryType
     
-    let advertisedService: ServiceType
+    public let advertisedService: ServiceType
     
-    let softwareVersion: String
+    public let softwareVersion: String
     
-    let serialNumber: SerialNumber // loaded from solar device
+    public let serialNumber: SerialNumber // loaded from solar device
     
-    let protocolID: ProtocolID
+    public let protocolID: ProtocolID
         
     public let setupSharedSecret: BluetoothAccessory.KeyData
     
@@ -77,12 +73,13 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         }
     }
     
-    init(
+    public init(
         peripheral: Peripheral,
         device: MPPSolar,
         id: UUID,
         rssi: Int8,
         model: String,
+        softwareVersion: String,
         setupSharedSecret: BluetoothAccessory.KeyData
     ) async throws {
         
@@ -90,7 +87,6 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         let manufacturer = "MPP Solar Inc."
         let accessoryType = AccessoryType.solarPanel
         let advertisedService = ServiceType.solarPanel
-        let softwareVersion = MPPSolarBluetoothTool.configuration.version
         
         // read serial number from device
         let serialNumber = try device.send(SerialNumber.Query()).serialNumber
@@ -291,3 +287,5 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         }
     }
 }
+
+#endif
