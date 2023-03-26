@@ -8,10 +8,23 @@
 import Foundation
 import Bluetooth
 
+/// MPP Solar Characteristics
 public enum MPPSolarCharacteristicType: UInt16, Codable, CaseIterable {
     
     /// Protocol ID Characteristic
     case protocolID
+    
+    /// Firmware Main CPU
+    case firmware
+    
+    /// Firmware Secondary CPU
+    case firmware2
+    
+    /// Solar Command Request
+    case solarRequest
+    
+    /// Solar Command Response
+    case solarResponse
 }
 
 // MARK: - CustomStringConvertible
@@ -22,6 +35,14 @@ extension MPPSolarCharacteristicType: CustomStringConvertible {
         switch self {
         case .protocolID:
             return "Protocol ID"
+        case .firmware:
+            return "Firmware Main CPU"
+        case .firmware2:
+            return "Firmware Secondary CPU"
+        case .solarRequest:
+            return "Solar Command Request"
+        case .solarResponse:
+            return "Solar Command Response"
         }
     }
 }
