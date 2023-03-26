@@ -46,11 +46,11 @@ struct MPPSolarBluetoothTool: ParsableCommand {
     @Option(help: "The path to the solar device.")
     var device: String = "/dev/hidraw0"
     
-    @Option(help: "The path to the configuration.")
+    @Option(help: "The path to the configuration file.")
     var configuration: String = "configuration.json"
     
     @Option(help: "The interval (in seconds) at which data is refreshed.")
-    var refreshInterval: Int = 10
+    var refreshInterval: Int = 5
     
     private static var server: MPPSolarBluetoothServer<NativePeripheral>!
     
@@ -100,7 +100,8 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             rssi: configuration.rssi,
             model: configuration.model,
             softwareVersion: MPPSolarBluetoothTool.configuration.version,
-            setupSharedSecret: configuration.setupSecret
+            setupSharedSecret: configuration.setupSecret,
+            refreshInterval: TimeInterval(refreshInterval)
         )
     }
     

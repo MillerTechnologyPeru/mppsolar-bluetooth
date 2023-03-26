@@ -43,6 +43,8 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     
     public let device: MPPSolar
     
+    public let refreshInterval: TimeInterval
+    
     private var keySecrets = [UUID: KeyData]()
     private var keys = [UUID: Key]()
     private var newKeys = [UUID: NewKey]()
@@ -80,9 +82,11 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         rssi: Int8,
         model: String,
         softwareVersion: String,
-        setupSharedSecret: BluetoothAccessory.KeyData
+        setupSharedSecret: BluetoothAccessory.KeyData,
+        refreshInterval: TimeInterval
     ) async throws {
         
+        assert(refreshInterval > 1)
         let name = "MPPSolar"
         let manufacturer = "MPP Solar Inc."
         let accessoryType = AccessoryType.solarPanel
@@ -91,6 +95,8 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         // read serial number from device
         let serialNumber = try device.send(SerialNumber.Query()).serialNumber
         let protocolID = try device.send(ProtocolID.Query()).protocolID
+        //let firmwareVersion = try device.send(FirmwareVersion.Query()).version
+        //let firmwareVersion2 = try device.send(FirmwareVersion.Query.Secondary()).version
         
         let information = try await MPPSolarInformationService(
             peripheral: peripheral,
@@ -125,6 +131,7 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         self.protocolID = protocolID
         self.setupSharedSecret = setupSharedSecret
         self.device = device
+        self.refreshInterval = refreshInterval
         self.server = try await BluetoothAccessoryServer(
             peripheral: peripheral,
             delegate: self,
@@ -143,6 +150,22 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         #if os(Linux)
         try await addStandardDeviceInformation()
         #endif
+        
+        // read data from device
+        try await refresh()
+        
+        // reload periodically
+        Task { [weak self] in
+            while let self = self {
+                try await Task.sleep(timeInterval: self.refreshInterval)
+                do {
+                    try await self.refresh()
+                }
+                catch {
+                    self.log("Unable to reload data: \(error)")
+                }
+            }
+        }
     }
     
     private func addStandardDeviceInformation() async throws {
@@ -182,6 +205,21 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         )
         
         _ = try await self.server.peripheral.add(service: gattInformation)
+    }
+    
+    public func refresh() async throws {
+        
+        let status = try device.send(GeneralStatus.Query())
+        
+        await server.update(OutletService.self) {
+            $0.powerState = status.outputVoltage > 0
+            //$0.outletInUse = status.outputActivePower > 0
+        }
+        
+        //let mode = try device.send(DeviceMode.Query())
+        //let warning = try device.send(WarningStatus.Query())
+        //let flags = try device.send(FlagStatus.Query())
+        //let rating = try device.send(DeviceRating.Query())
     }
     
     public nonisolated func log(_ message: String) {
