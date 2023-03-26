@@ -47,7 +47,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
     @Option(help: "The received signal strength indicator (RSSI) value (measured in decibels) for the device.")
     var rssi: Int8 = 30
     
-    private static var server: BluetoothAccesoryServer<NativePeripheral>!
+    private static var server: MPPSolarBluetoothServer<NativePeripheral>!
     
     func validate() throws {
         guard refreshInterval >= 1 else {
@@ -75,11 +75,6 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         
         let id = UUID()
         let rssi = self.rssi
-        let name = "MPPSolar"
-        let manufacturer = "MPP Solar Inc."
-        let accessoryType = AccessoryType.solarPanel
-        let advertisedService = ServiceType.solarPanel
-        let softwareVersion = MPPSolarBluetoothTool.configuration.version
         
         #if os(Linux)
         guard let hostController = await HostController.default else {
@@ -121,96 +116,9 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         }
         #endif
         
-        let serialNumber = try device.send(SerialNumber.Query()).serialNumber.rawValue
-        //let status = try device.send(GeneralStatus.Query())
-        
-        let information = try await InformationService(
-            peripheral: peripheral,
-            id: id,
-            name: name,
-            accessoryType: accessoryType,
-            manufacturer: manufacturer,
-            model: model,
-            serialNumber: serialNumber,
-            softwareVersion: softwareVersion
-        )
-        
-        #if os(Linux)
-        let gattInformation = GATTAttribute.Service(
-            uuid: .deviceInformation,
-            characteristics: [
-                GATTAttribute.Characteristic(
-                    uuid: GATTManufacturerNameString.uuid,
-                    value: GATTManufacturerNameString(rawValue: manufacturer).data,
-                    permissions: [.read],
-                    properties: [.read],
-                    descriptors: []
-                ),
-                GATTAttribute.Characteristic(
-                    uuid: GATTModelNumber.uuid,
-                    value: GATTModelNumber(rawValue: model).data,
-                    permissions: [.read],
-                    properties: [.read],
-                    descriptors: []
-                ),
-                GATTAttribute.Characteristic(
-                    uuid: GATTSoftwareRevisionString.uuid,
-                    value: GATTSoftwareRevisionString(rawValue: softwareVersion).data,
-                    permissions: [.read],
-                    properties: [.read],
-                    descriptors: []
-                ),
-                GATTAttribute.Characteristic(
-                    uuid: GATTSerialNumberString.uuid,
-                    value: GATTSerialNumberString(rawValue: serialNumber).data,
-                    permissions: [.read],
-                    properties: [.read],
-                    descriptors: []
-                ),
-            ]
-        )
-        
-        _ = try await peripheral.add(service: gattInformation)
-        #endif
         
         // publish GATT server, enable advertising
-        try await Self.server = BluetoothAccesoryServer(
-            peripheral: peripheral,
-            id: id,
-            rssi: rssi,
-            name: name,
-            advertised: advertisedService,
-            services: [information]
-        )
+        
     }
-    
-    /*
-    // change advertisment for notifications
-    private func characteristicChanged(_ characteristic: CharacteristicType) {
-        #if os(Linux)
-        let id = self.uuid
-        let rssi = self.rssi
-        guard let hostController = self.hostController else {
-            return
-        }
-        Task.detached {
-            do {
-                try await hostController.setAdvertisingData(
-                    beacon: .characteristicChanged(id, characteristic),
-                    rssi: rssi,
-                    flags: [.limitedDiscoverable, .notSupportedBREDR]
-                )
-                try await Task.sleep(nanoseconds: 3 * 1_000_000_000)
-                try await hostController.setAdvertisingData(
-                    beacon: .id(id),
-                    rssi: rssi
-                )
-            }
-            catch {
-                print("Unable to change advertising. \(error.localizedDescription)")
-            }
-        }
-        #endif
-    }*/
 }
 
