@@ -12,6 +12,7 @@ import GATT
 import BluetoothAccessory
 import MPPSolar
 
+/// MPP Solar Accessory Information Service
 public struct MPPSolarInformationService: AccessoryService {
     
     public static var type: BluetoothUUID { BluetoothUUID(service: .information) }
@@ -62,7 +63,7 @@ public struct MPPSolarInformationService: AccessoryService {
         protocolID: ProtocolID
     ) async throws {
         let (serviceHandle, valueHandles) = try await peripheral.add(
-            service: InformationService.self,
+            service: MPPSolarInformationService.self,
             with: [
                 IdentifierCharacteristic.self,
                 NameCharacteristic.self,
