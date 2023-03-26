@@ -45,4 +45,43 @@ extension ProtocolID: BluetoothAccessory.CharacteristicCodable {
 
 // MARK: - Central
 
+public extension CentralManager {
+    
+    /// Read MPP Solar accessory protocol ID
+    func readSolarProtocolID(
+        characteristic: Characteristic<Peripheral, AttributeID>,
+        service: BluetoothUUID = BluetoothUUID(service: .information),
+        cryptoHash cryptoHashCharacteristic: Characteristic<Peripheral, AttributeID>,
+        authentication authenticationCharacteristic: Characteristic<Peripheral, AttributeID>,
+        key: Credential
+    ) async throws -> ProtocolID {
+        return try await readEncryped(
+            MPPSolarProtocolIDCharacteristic.self,
+            characteristic: characteristic,
+            service: service,
+            cryptoHash: cryptoHashCharacteristic,
+            authentication: authenticationCharacteristic,
+            key: key
+        ).value
+    }
+}
 
+public extension GATTConnection {
+    
+    /// Read accessory power state.
+    func readPowerState(
+        service: BluetoothUUID,
+        key: Credential
+    ) async throws -> ProtocolID {
+        let characteristic = try self.cache.characteristic(BluetoothUUID(characteristic: .protocolID), service: service)
+        let cryptoHash = try self.cache.characteristic(.cryptoHash, service: .authentication)
+        let authentication = try self.cache.characteristic(.authenticate, service: .authentication)
+        return try await self.central.readSolarProtocolID(
+            characteristic: characteristic,
+            service: service,
+            cryptoHash: cryptoHash,
+            authentication: authentication,
+            key: key
+        )
+    }
+}
