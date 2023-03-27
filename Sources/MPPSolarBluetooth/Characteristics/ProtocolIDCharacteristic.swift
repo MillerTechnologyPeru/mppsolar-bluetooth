@@ -68,9 +68,9 @@ public extension CentralManager {
 
 public extension GATTConnection {
     
-    /// Read accessory power state.
-    func readPowerState(
-        service: BluetoothUUID,
+    /// Read MPP Solar accessory protocol ID
+    func readSolarProtocolID(
+        service: BluetoothUUID = BluetoothUUID(service: .information),
         key: Credential
     ) async throws -> ProtocolID {
         let characteristic = try self.cache.characteristic(BluetoothUUID(characteristic: .protocolID), service: service)
