@@ -49,10 +49,13 @@ struct MPPSolarBluetoothTool: ParsableCommand {
     @Option(help: "The path to the configuration file.")
     var configuration: String = "configuration.json"
     
+    @Option(help: "The path to the authentication file.")
+    var authentication: String = "authentication.json"
+    
     @Option(help: "The interval (in seconds) at which data is refreshed.")
     var refreshInterval: Int = 5
     
-    private static var server: MPPSolarBluetoothServer<NativePeripheral>!
+    private static var server: MPPSolarBluetoothServer<NativePeripheral, MPPSolarAuthentication>!
     
     private static let fileManager = FileManager()
     
@@ -91,6 +94,11 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         let device = try await loadSolarDevice()
         // load Bluetooth
         let peripheral = try await loadBluetooth()
+        // load authentication
+        let authentication = MPPSolarAuthentication(
+            configurationURL: Self.url(for: self.configuration),
+            authenticationURL: Self.url(for: self.authentication)
+        )
         
         // publish GATT server, enable advertising
         Self.server = try await MPPSolarBluetoothServer(
@@ -100,8 +108,8 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             rssi: configuration.rssi,
             model: configuration.model,
             softwareVersion: MPPSolarBluetoothTool.configuration.version,
-            setupSharedSecret: configuration.setupSecret,
-            refreshInterval: TimeInterval(refreshInterval)
+            refreshInterval: TimeInterval(refreshInterval),
+            authentication: authentication
         )
     }
     
@@ -126,7 +134,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             #endif
             return configuration
         } else {
-            let configuration = MPPSolarConfiguration()
+            let configuration = MPPSolarConfiguration(rssi: 0) // default value
             let data = try configuration.encode()
             let didCreate = Self.fileManager.createFile(atPath: fileURL.path, contents: data)
             precondition(didCreate)
@@ -141,7 +149,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         print("ID: \(configuration.id)")
         print("Model: \(configuration.model)")
         print("RSSI: \(configuration.rssi)")
-        
+        // TODO: Print Pairing URL
     }
     
     func loadSolarDevice() async throws -> MPPSolar {
