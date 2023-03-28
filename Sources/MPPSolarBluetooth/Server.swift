@@ -13,7 +13,7 @@ import GATT
 import BluetoothAccessory
 import MPPSolar
 
-public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: BluetoothAccessoryServerDelegate {
+public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager, Authentication: MPPSolarAuthenticationDelegate> {
     
     // MARK: - Properties
     
@@ -36,24 +36,14 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
     public let serialNumber: SerialNumber // loaded from solar device
     
     public let protocolID: ProtocolID
-        
-    public let setupSharedSecret: BluetoothAccessory.KeyData
-    
+            
     private var server: BluetoothAccessoryServer<Peripheral>!
     
     public let device: MPPSolar
     
     public let refreshInterval: TimeInterval
     
-    private var keySecrets = [UUID: KeyData]()
-    private var keys = [UUID: Key]()
-    private var newKeys = [UUID: NewKey]()
-    
-    public var cryptoHash: Nonce {
-        get async {
-            await self.authentication.cryptoHash
-        }
-    }
+    internal let authenticationDelegate: Authentication
     
     var lastIdentify: (UUID, Date)?
     
@@ -64,8 +54,8 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         rssi: Int8,
         model: String,
         softwareVersion: String,
-        setupSharedSecret: BluetoothAccessory.KeyData,
-        refreshInterval: TimeInterval
+        refreshInterval: TimeInterval,
+        authentication authenticationDelegate: Authentication
     ) async throws {
         
         assert(refreshInterval > 1)
@@ -93,10 +83,15 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
             protocolID: protocolID
         )
         
+        // services
         let authentication = try await AuthenticationService(peripheral: peripheral)
         let battery = try await MPPSolarBatteryService(peripheral: peripheral)
         let outlet = try await OutletService(peripheral: peripheral)
         
+        // service delegate
+        self.authenticationDelegate = authenticationDelegate
+        
+        // store properties
         self.id = id
         self.rssi = rssi
         self.model = model
@@ -107,9 +102,10 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         self.softwareVersion = softwareVersion
         self.serialNumber = serialNumber
         self.protocolID = protocolID
-        self.setupSharedSecret = setupSharedSecret
         self.device = device
         self.refreshInterval = refreshInterval
+        
+        // accessory server
         self.server = try await BluetoothAccessoryServer(
             peripheral: peripheral,
             delegate: self,
@@ -209,20 +205,33 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         //let flags = try device.send(FlagStatus.Query())
         //let rating = try device.send(DeviceRating.Query())
     }
+}
+
+// MARK: - BluetoothAccessoryServerDelegate
+
+extension MPPSolarBluetoothServer: BluetoothAccessoryServerDelegate {
+       
+    public var cryptoHash: Nonce {
+        get async {
+            await self.authentication.cryptoHash
+        }
+    }
     
     public nonisolated func log(_ message: String) {
         print("Accessory:", message)
     }
     
-    public nonisolated func didAdvertise(beacon: BluetoothAccessory.AccessoryBeacon) {
-        
-    }
+    public nonisolated func didAdvertise(beacon: BluetoothAccessory.AccessoryBeacon) { }
     
-    public func key(for id: UUID) -> KeyData? {
-        self.keySecrets[id]
+    public func key(for id: UUID) async -> KeyData? {
+        await self.authenticationDelegate.secret(for: id)
     }
     
     public func willRead(_ handle: UInt16, authentication authenticationMessage: AuthenticationMessage?) async -> Bool {
+        return true
+    }
+    
+    public func willWrite(_ handle: UInt16, authentication: BluetoothAccessory.AuthenticationMessage?) async -> Bool {
         return true
     }
     
@@ -232,7 +241,7 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
         case await information.$identify.handle:
             if await information.identify {
                 guard let authenticationMessage = authenticationMessage,
-                      let key = self.keys[authenticationMessage.id] else {
+                      let key = await authenticationDelegate.key(for: authenticationMessage.id) else {
                     assertionFailure()
                     return
                 }
@@ -245,7 +254,7 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
             }
         case await outlet.$powerState.handle:
             guard let authenticationMessage = authenticationMessage,
-                  let key = self.keys[authenticationMessage.id] else {
+                  let key = await authenticationDelegate.key(for: authenticationMessage.id) else {
                 assertionFailure()
                 return
             }
@@ -254,53 +263,57 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager>: B
             
         case await authentication.$setup.handle:
             //assert(await authentication.$setup.value == characteristicValue)
-            guard let request = await authentication.setup else {
+            guard let authenticationMessage = authenticationMessage,
+                  let request = await authentication.setup else {
                 assertionFailure()
                 return
             }
-            // create new key
-            let ownerKey = Key(setup: request)
-            self.keys[ownerKey.id] = ownerKey
-            self.keySecrets[ownerKey.id] = request.secret
-            log("Setup owner key for \(ownerKey.name)")
+            // create new owner key
+            guard await authenticationDelegate.setup(request, authenticationMessage: authenticationMessage) else {
+                assertionFailure()
+                return
+            }
+            log("Setup owner key for \(request.name)")
             // clear value
+            let newKeysValue = await self.authenticationDelegate.allKeys
             await self.server.update(AuthenticationService.self) {
                 $0.setup = nil
-                $0.keys = [.key(ownerKey)]
+                $0.keys = newKeysValue
             }
         
         case await authentication.$createKey.handle:
-            guard let request = await authentication.createKey else {
+            guard let request = await authentication.createKey,
+                let authenticationMessage = authenticationMessage else {
                 assertionFailure()
                 return
             }
             // create a new key
-            let newKey = NewKey(request: request)
-            let secret = request.secret
-            self.newKeys[newKey.id] = newKey
-            self.keySecrets[newKey.id] = secret
+            guard await authenticationDelegate.create(request, authenticationMessage: authenticationMessage) else {
+                assertionFailure()
+                return
+            }
             // update db
+            let newKeysValue = await self.authenticationDelegate.allKeys
             await self.server.update(AuthenticationService.self) {
                 $0.createKey = nil
-                $0.keys.append(.newKey(newKey))
+                $0.keys = newKeysValue
             }
         case await authentication.$confirmKey.handle:
             guard let request = await authentication.confirmKey,
-                  let authenticationMessage = authenticationMessage,
-                  let newKey = self.newKeys[authenticationMessage.id] else {
+                  let authenticationMessage = authenticationMessage else {
                 assertionFailure()
                 return
             }
             // confirm key
-            let key = newKey.confirm()
-            self.newKeys[authenticationMessage.id] = nil
-            self.keySecrets[authenticationMessage.id] = request.secret
-            self.keys[newKey.id] = key
+            guard await authenticationDelegate.confirm(request, authenticationMessage: authenticationMessage) else {
+                assertionFailure()
+                return
+            }
             // update db
+            let newKeysValue = await self.authenticationDelegate.allKeys
             await self.server.update(AuthenticationService.self) {
                 $0.createKey = nil
-                $0.keys.removeAll(where: { $0.id == newKey.id })
-                $0.keys.append(.key(key))
+                $0.keys = newKeysValue
             }
         default:
             break
