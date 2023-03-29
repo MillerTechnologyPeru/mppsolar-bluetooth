@@ -25,6 +25,9 @@ public enum MPPSolarCharacteristicType: UInt16, Codable, CaseIterable {
     
     /// Solar Command Response
     case solarResponse
+    
+    /// Read-only power state for inverter output..
+    case inverterPowerState
 }
 
 // MARK: - CustomStringConvertible
@@ -43,6 +46,8 @@ extension MPPSolarCharacteristicType: CustomStringConvertible {
             return "Solar Command Request"
         case .solarResponse:
             return "Solar Command Response"
+        case .inverterPowerState:
+            return "Inverter Power State"
         }
     }
 }
