@@ -84,7 +84,11 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager, Au
         )
         
         // services
-        let authentication = try await AuthenticationService(peripheral: peripheral)
+        let authentication = try await AuthenticationService(
+            peripheral: peripheral,
+            isConfigured: await authenticationDelegate.isConfigured,
+            keys: await authenticationDelegate.allKeys
+        )
         let battery = try await MPPSolarBatteryService(peripheral: peripheral)
         let outlet = try await OutletService(peripheral: peripheral)
         
