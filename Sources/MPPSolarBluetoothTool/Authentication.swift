@@ -40,10 +40,10 @@ private extension MPPSolarAuthentication {
         var file: File
         // create or read file
         if fileManager.fileExists(atPath: url.path) {
+            file = try File(url: url)
+        } else {
             file = File()
             try fileManager.createFile(atPath: url.path, contents: file.encode())
-        } else {
-            file = try File(url: authenticationURL)
         }
         let oldHash = file.hashValue
         let result = block(&file)

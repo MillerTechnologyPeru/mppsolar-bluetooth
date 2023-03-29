@@ -83,7 +83,6 @@ struct MPPSolarBluetoothTool: ParsableCommand {
                 fatalError("\(error)")
             }
         }
-        
         // run main loop
         RunLoop.current.run()
     }
@@ -92,13 +91,20 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         
         // load solar device
         let device = try await loadSolarDevice()
-        // load Bluetooth
-        let peripheral = try await loadBluetooth()
+        
         // load authentication
         let authentication = MPPSolarAuthentication(
             configurationURL: Self.url(for: self.configuration),
             authenticationURL: Self.url(for: self.authentication)
         )
+        
+        // print pairing code
+        if await authentication.isConfigured == false {
+            print("Pairing:", AccessoryURL.setup(configuration.id, configuration.setupSecret))
+        }
+        
+        // load Bluetooth
+        let peripheral = try await loadBluetooth()
         
         // publish GATT server, enable advertising
         Self.server = try await MPPSolarBluetoothServer(
@@ -149,7 +155,6 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         print("ID: \(configuration.id)")
         print("Model: \(configuration.model)")
         print("RSSI: \(configuration.rssi)")
-        // TODO: Print Pairing URL
     }
     
     func loadSolarDevice() async throws -> MPPSolar {
