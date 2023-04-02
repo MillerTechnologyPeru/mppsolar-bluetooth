@@ -10,6 +10,7 @@ import Glibc
 import BluetoothLinux
 #elseif os(macOS)
 import Darwin
+import CoreBluetooth
 import DarwinGATT
 #endif
 
@@ -163,7 +164,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         let device = MPPSolar.mock
         print("Using mocked solar device")
         #else
-        guard let device = MPPSolar(path: self.device) else {
+        guard let device = await MPPSolar(path: self.device) else {
             throw CommandError.solarDeviceUnavailable
         }
         print("Loaded solar device at \(self.device)")
@@ -192,7 +193,12 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             socket: BluetoothLinux.L2CAPSocket.self
         )
         #elseif os(macOS)
-        let peripheral = DarwinPeripheral()
+        let peripheral = DarwinPeripheral(
+            options: .init(
+                showPowerAlert: true,
+                restoreIdentifier: "com.colemancda.mppsolar-bluetooth"
+            )
+        )
         #endif
         
         peripheral.log = { print("Peripheral:", $0) }
