@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  JSONFile.swift
 //  
 //
 //  Created by Alsey Coleman Miller on 3/27/23.

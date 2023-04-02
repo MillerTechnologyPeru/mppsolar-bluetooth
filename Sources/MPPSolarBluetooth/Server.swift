@@ -65,8 +65,8 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager, Au
         let advertisedService = ServiceType.solarPanel
         
         // read serial number from device
-        let serialNumber = try device.send(SerialNumber.Query()).serialNumber
-        let protocolID = try device.send(ProtocolID.Query()).protocolID
+        let serialNumber = try await device.send(SerialNumber.Query()).serialNumber
+        let protocolID = try await device.send(ProtocolID.Query()).protocolID
         //let firmwareVersion = try device.send(FirmwareVersion.Query()).version
         //let firmwareVersion2 = try device.send(FirmwareVersion.Query.Secondary()).version
         
@@ -188,7 +188,7 @@ public actor MPPSolarBluetoothServer <Peripheral: AccessoryPeripheralManager, Au
     
     public func refresh() async throws {
         
-        let status = try device.send(GeneralStatus.Query())
+        let status = try await device.send(GeneralStatus.Query())
         
         // update battery service
         await server.update(MPPSolarBatteryService.self) {
