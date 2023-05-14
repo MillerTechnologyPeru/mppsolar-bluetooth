@@ -182,7 +182,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
             throw CommandError.bluetoothUnavailable
         }
         let address = try await hostController.readDeviceAddress()
-        print("Bluetooth Controller: \(address)")
+        NSLog("Bluetooth Controller: \(address)")
         let serverOptions = GATTPeripheralOptions(
             maximumTransmissionUnit: .max,
             maximumPreparedWrites: 1000
@@ -201,7 +201,7 @@ struct MPPSolarBluetoothTool: ParsableCommand {
         )
         #endif
         
-        peripheral.log = { print("Peripheral:", $0) }
+        peripheral.log = { NSLog("Peripheral: \($0)") }
         
         #if os(macOS)
         // wait till power on
